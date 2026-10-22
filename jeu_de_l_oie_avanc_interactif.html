@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de l'Oie Avancé & Interactif</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 8px;
+        }
+        @keyframes dice-shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+            75% { transform: rotate(-5deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .rolling {
+            animation: dice-shake 0.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <!-- Header / Navbar -->
+    <header class="w-full bg-white dark:bg-slate-800 shadow-md py-4 px-6 flex justify-between items-center transition-colors">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg flex items-center justify-center w-10 h-10">
+                <i class="fa-solid fa-dice text-lg"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                Super Jeu de l'Oie
+            </h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- Rules Button -->
+            <button onclick="toggleModal('rules-modal')" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-sm font-medium transition flex items-center space-x-2">
+                <i class="fa-solid fa-book-open"></i>
+                <span class="hidden sm:inline">Règles</span>
+            </button>
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl transition text-slate-600 dark:text-slate-300">
+                <i id="theme-icon" class="fa-solid fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left Column: Settings & Scoreboard -->
+        <div class="lg:col-span-1 flex flex-col space-y-6">
+            <!-- Game Configuration Card -->
+            <div id="config-card" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl transition-colors">
+                <h2 class="text-lg font-bold mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-gear text-emerald-500"></i>
+                    <span>Paramètres de Partie</span>
+                </h2>
+                <form id="game-form" onsubmit="startGame(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre de joueurs</label>
+                        <select id="player-count" class="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500">
+                            <option value="1">1 Joueur (vs Bot)</option>
+                            <option value="2" selected>2 Joueurs</option>
+                            <option value="3">3 Joueurs</option>
+                            <option value="4">4 Joueurs</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre de cases (15 - 50)</label>
+                        <input type="number" id="board-size" min="15" max="50" value="30" class="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Lancers max autorisés</label>
+                        <input type="number" id="max-turns" min="10" max="100" value="40" class="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition transform active:scale-95">
+                        Lancer la Partie
+                    </button>
+                </form>
+            </div>
+
+            <!-- Scoreboard Card -->
+            <div id="score-card" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl transition-colors hidden">
+                <h2 class="text-lg font-bold mb-3 flex items-center space-x-2">
+                    <i class="fa-solid fa-trophy text-amber-500"></i>
+                    <span>Joueurs & Positions</span>
+                </h2>
+                <div id="players-list" class="space-y-3">
+                    <!-- Dynamic Player Stats -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Center/Right Column: Board & Play Area -->
+        <div class="lg:col-span-3 flex flex-col space-y-6">
+            <!-- Welcome / Unstarted Banner -->
+            <div id="welcome-banner" class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl text-center flex flex-col items-center justify-center min-h-[300px]">
+                <div class="text-6xl text-emerald-500 mb-4 animate-bounce">
+                    <i class="fa-solid fa-dice"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">Bienvenue au Jeu de l'Oie Interactif</h2>
+                <p class="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+                    Configurez votre partie à gauche, affrontez vos amis ou le Bot intelligent, et tentez d'atteindre la case finale en évitant les pièges !
+                </p>
+                <button onclick="quickStart()" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition">
+                    Partie Rapide (2 Joueurs)
+                </button>
+            </div>
+
+            <!-- Game Interface (Hidden initially) -->
+            <div id="game-interface" class="flex flex-col space-y-6 hidden">
+                <!-- Action / Dice Bar -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div id="current-player-avatar" class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-md bg-emerald-500">
+                            P1
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Tour Actuel</div>
+                            <div id="current-player-name" class="text-lg font-bold">Joueur 1</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-6">
+                        <div class="text-center">
+                            <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Lancers Restants</div>
+                            <div id="turns-left-display" class="text-lg font-bold text-emerald-500">40</div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div id="dice-container" class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center text-2xl font-bold shadow-inner border border-slate-200 dark:border-slate-600">
+                                <i id="dice-icon" class="fa-solid fa-dice-one"></i>
+                            </div>
+                            <button id="roll-btn" onclick="rollDice()" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-400 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition flex items-center space-x-2">
+                                <i class="fa-solid fa-dice"></i>
+                                <span>Lancer le Dé</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Board Grid -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-sm uppercase text-slate-500 dark:text-slate-400 tracking-wider">Plateau de Jeu</h3>
+                        <div class="flex items-center space-x-4 text-xs font-medium">
+                            <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span><span>Bonus (+2 cases)</span></span>
+                            <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"><span></span><span>Malus (-2 cases)</span></span>
+                            <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span><span>Rejouer</span></span>
+                        </div>
+                    </div>
+                    <div id="board-grid" class="board-grid">
+                        <!-- Dynamic Cases -->
+                    </div>
+                </div>
+
+                <!-- History Log -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
+                    <h3 class="font-bold text-sm uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-3">Historique des lancers & actions</h3>
+                    <div id="history-log" class="h-36 overflow-y-auto space-y-2 pr-2 text-sm font-mono text-slate-600 dark:text-slate-300">
+                        <div class="text-slate-400 italic">La partie n'a pas encore commencé...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400 dark:text-slate-500">
+        Jeu de l'Oie Interactif &bull; Propulsé par Tailwind CSS
+    </footer>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 max-w-lg w-full p-6 rounded-3xl shadow-2xl relative">
+            <button onclick="toggleModal('rules-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-book-open text-emerald-500"></i>
+                <span>Règles du Jeu</span>
+            </h3>
+            <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300 mb-6">
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong>Objectif :</strong> Atteindre ou dépasser la dernière case du plateau en premier.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong>Lancers :</strong> À votre tour, lancez le dé (1 à 6) pour avancer du nombre correspondant.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong class="text-emerald-500">Case Bonus (+2) :</strong> Vous avancez de 2 cases supplémentaires !</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong class="text-rose-500">Case Malus (-2) :</strong> Vous reculez de 2 cases.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong class="text-amber-500">Case Rejouer :</strong> Vous gagnez un lancer supplémentaire immédiatement !</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mt-1"></i>
+                    <span><strong>Limite de lancers :</strong> La partie s'arrête si le nombre maximum de lancers global est atteint.</span>
+                </li>
+            </ul>
+            <button onclick="toggleModal('rules-modal')" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition">
+                J'ai compris !
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory / Message Modal -->
+    <div id="message-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 max-w-sm w-full p-6 rounded-3xl shadow-2xl text-center">
+            <div id="msg-icon" class="text-5xl text-amber-500 mb-3">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h3 id="msg-title" class="text-xl font-bold mb-2">Victoire !</h3>
+            <p id="msg-text" class="text-sm text-slate-600 dark:text-slate-300 mb-6">Le Joueur 1 a gagné la partie !</p>
+            <button onclick="closeMessageModal()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition">
+                Nouvelle Partie
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        // Game State Variables
+        let gameState = {
+            players: [],
+            currentPlayerIndex: 0,
+            boardSize: 30,
+            maxTurns: 40,
+            turnsLeft: 40,
+            boardSpecialCases: {}, // index -> type ('bonus', 'malus', 'replay')
+            isGameOver: false,
+            isBotTurn: false
+        };
+
+        const playerColors = [
+            { bg: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-500', name: 'Joueur 1' },
+            { bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500', name: 'Joueur 2' },
+            { bg: 'bg-purple-500', text: 'text-purple-500', border: 'border-purple-500', name: 'Joueur 3' },
+            { bg: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-500', name: 'Joueur 4 (Bot)' }
+        ];
+
+        // Toggle Theme (Dark / Light)
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun';
+            }
+        }
+
+        // Toggle Modals
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.toggle('hidden');
+        }
+
+        function showMessage(title, text, iconClass = 'fa-solid fa-trophy') {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerText = text;
+            document.getElementById('msg-icon').innerHTML = `<i class="${iconClass}"></i>`;
+            document.getElementById('message-modal').classList.remove('hidden');
+        }
+
+        function closeMessageModal() {
+            document.getElementById('message-modal').classList.add('hidden');
+            resetToWelcome();
+        }
+
+        function resetToWelcome() {
+            document.getElementById('game-interface').classList.add('hidden');
+            document.getElementById('score-card').classList.add('hidden');
+            document.getElementById('welcome-banner').classList.remove('hidden');
+        }
+
+        function quickStart() {
+            document.getElementById('player-count').value = "2";
+            document.getElementById('board-size').value = "25";
+            document.getElementById('max-turns').value = "30";
+            startGame(new Event('submit'));
+        }
+
+        // Initialize Game
+        function startGame(e) {
+            if (e) e.preventDefault();
+
+            const playerCount = parseInt(document.getElementById('player-count').value);
+            const boardSize = parseInt(document.getElementById('board-size').value);
+            const maxTurns = parseInt(document.getElementById('max-turns').value);
+
+            gameState.boardSize = boardSize;
+            gameState.maxTurns = maxTurns;
+            gameState.turnsLeft = maxTurns;
+            gameState.currentPlayerIndex = 0;
+            gameState.isGameOver = false;
+            gameState.boardSpecialCases = {};
+            gameState.isBotTurn = false;
+
+            // Generate Players
+            gameState.players = [];
+            for (let i = 0; i < playerCount; i++) {
+                let name = playerColors[i].name;
+                if (playerCount === 1 && i === 1) name = 'Bot Intelligent';
+                if (playerCount === 1 && i === 0) name = 'Joueur 1';
+
+                gameState.players.push({
+                    id: i,
+                    name: name,
+                    position: 0,
+                    color: playerColors[i],
+                    isBot: (playerCount === 1 && i === 1)
+                });
+            }
+            // If solo, add Bot as player 2
+            if (playerCount === 1) {
+                gameState.players.push({
+                    id: 1,
+                    name: 'Bot',
+                    position: 0,
+                    color: playerColors[3],
+                    isBot: true
+                });
+            }
+
+            // Generate Random Special Cases (Bonus, Malus, Replay)
+            // Avoid case 0 and final case
+            const specialTypes = ['bonus', 'malus', 'replay'];
+            const numSpecial = Math.floor(boardSize / 5);
+            for (let i = 0; i < numSpecial; i++) {
+                const randomPos = Math.floor(Math.random() * (boardSize - 2)) + 1;
+                const randomType = specialTypes[Math.floor(Math.random() * specialTypes.length)];
+                gameState.boardSpecialCases[randomPos] = randomType;
+            }
+
+            // UI Adjustments
+            document.getElementById('welcome-banner').classList.add('hidden');
+            document.getElementById('game-interface').classList.remove('hidden');
+            document.getElementById('score-card').classList.remove('hidden');
+            document.getElementById('history-log.innerHTML').innerHTML = '';
+
+            addHistoryLog("Partie initialisée avec succès ! Bon jeu !");
+            updateUI();
+        }
+
+        // Update Render
+        function updateUI() {
+            // Update Turns Left
+            document.getElementById('turns-left-display').innerText = gameState.turnsLeft;
+
+            // Update Current Player Info
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const avatar = document.getElementById('current-player-avatar');
+            avatar.className = `w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-md ${currentPlayer.color.bg}`;
+            avatar.innerText = currentPlayer.name.charAt(0);
+            document.getElementById('current-player-name').innerText = currentPlayer.name;
+
+            // Disable roll button if bot turn or game over
+            document.getElementById('roll-btn').disabled = gameState.isGameOver || currentPlayer.isBot;
+
+            // Render Scoreboard
+            const playersListEl = document.getElementById('players-list');
+            playersListEl.innerHTML = '';
+            gameState.players.forEach((p, idx) => {
+                const isCurrent = idx === gameState.currentPlayerIndex;
+                playersListEl.innerHTML += `
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${isCurrent ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-700'} transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg ${p.color.bg} text-white flex items-center justify-center font-bold text-sm">${p.name.charAt(0)}</div>
+                            <div>
+                                <div class="font-bold text-sm">${p.name}</div>
+                                <div class="text-xs text-slate-400">Position : Case ${p.position}/${gameState.boardSize}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Board
+            const boardGridEl = document.getElementById('board-grid');
+            boardGridEl.innerHTML = '';
+            for (let i = 0; i <= gameState.boardSize; i++) {
+                const specialType = gameState.boardSpecialCases[i];
+                let badgeHTML = '';
+                let borderClass = 'border-slate-200 dark:border-slate-700';
+                let bgClass = 'bg-slate-50 dark:bg-slate-700/50';
+
+                if (i === 0) {
+                    bgClass = 'bg-slate-200 dark:bg-slate-700';
+                } else if (i === gameState.boardSize) {
+                    bgClass = 'bg-amber-100 dark:bg-amber-950/40';
+                    borderClass = 'border-amber-400';
+                    badgeHTML = '<i class="fa-solid fa-flag-checkered text-amber-500 text-xs"></i>';
+                } else if (specialType === 'bonus') {
+                    bgClass = 'bg-emerald-50 dark:bg-emerald-950/30';
+                    badgeHTML = '<span class="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-1 rounded">+2</span>';
+                } else if (specialType === 'malus') {
+                    bgClass = 'bg-rose-50 dark:bg-rose-950/30';
+                    badgeHTML = '<span class="text-[9px] font-bold text-rose-600 bg-rose-100 px-1 rounded">-2</span>';
+                } else if (specialType === 'replay') {
+                    bgClass = 'bg-amber-50 dark:bg-amber-950/30';
+                    badgeHTML = '<span class="text-[9px] font-bold text-amber-600 bg-amber-100 px-1 rounded">Rejouer</span>';
+                }
+
+                // Check players on this tile
+                let tokensHTML = '';
+                gameState.players.forEach(p => {
+                    if (p.position === i) {
+                        tokensHTML += `<div class="w-5 h-5 rounded-full ${p.color.bg} text-white text-[10px] font-bold flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-800">${p.name.charAt(0)}</div>`;
+                    }
+                });
+
+                boardGridEl.innerHTML += `
+                    <div class="h-16 rounded-xl border ${borderClass} ${bgClass} p-1.5 flex flex-col justify-between relative transition">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                            <span>${i}</span>
+                            ${badgeHTML}
+                        </div>
+                        <div class="flex flex-wrap gap-0.5 justify-center items-center">
+                            ${tokensHTML}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Trigger Bot Turn if needed
+            if (!gameState.isGameOver && currentPlayer.isBot && !gameState.isBotTurn) {
+                gameState.isBotTurn = true;
+                setTimeout(runBotTurn, 1000);
+            }
+        }
+
+        // Dice Roll Logic
+        function rollDice() {
+            if (gameState.isGameOver) return;
+
+            const diceIcon = document.getElementById('dice-icon');
+            const rollBtn = document.getElementById('roll-btn');
+            rollBtn.disabled = true;
+
+            // Animation
+            diceIcon.className = "fa-solid fa-dice rolling";
+
+            setTimeout(() => {
+                const rollResult = Math.floor(Math.random() * 6) + 1;
+                diceIcon.className = `fa-solid fa-dice-${['one','two','three','four','five','six'][rollResult - 1]}`;
+
+                processPlayerMove(rollResult);
+            }, 600);
+        }
+
+        function processPlayerMove(rollResult) {
+            const player = gameState.players[gameState.currentPlayerIndex];
+            const oldPos = player.position;
+            let newPos = oldPos + rollResult;
+
+            addHistoryLog(`${player.name} a lancé un <strong>${rollResult}</strong>.`);
+
+            if (newPos >= gameState.boardSize) {
+                newPos = gameState.boardSize;
+                player.position = newPos;
+                updateUI();
+                triggerVictory(player);
+                return;
+            }
+
+            player.position = newPos;
+
+            // Check Special Cases
+            const special = gameState.boardSpecialCases[newPos];
+            let extraTurn = false;
+
+            if (special === 'bonus') {
+                newPos = Math.min(gameState.boardSize, newPos + 2);
+                player.position = newPos;
+                addHistoryLog(`✨ ${player.name} tombe sur une case <strong>Bonus</strong> ! Avance de 2 cases (Case ${newPos}).`);
+            } else if (special === 'malus') {
+                newPos = Math.max(0, newPos - 2);
+                player.position = newPos;
+                addHistoryLog(`⚠️ ${player.name} tombe sur une case <strong>Malus</strong> ! Recule de 2 cases (Case ${newPos}).`);
+            } else if (special === 'replay') {
+                extraTurn = true;
+                addHistoryLog(`🎲 ${player.name} tombe sur une case <strong>Rejouer</strong> ! Il relance le dé.`);
+            }
+
+            // Check final win after special
+            if (player.position >= gameState.boardSize) {
+                player.position = gameState.boardSize;
+                updateUI();
+                triggerVictory(player);
+                return;
+            }
+
+            gameState.turnsLeft--;
+
+            if (gameState.turnsLeft <= 0) {
+                triggerGameOver();
+                return;
+            }
+
+            // Next Turn / Replay Handling
+            if (!extraTurn) {
+                gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            }
+
+            gameState.isBotTurn = false;
+            updateUI();
+        }
+
+        function runBotTurn() {
+            if (gameState.isGameOver) return;
+            const rollResult = Math.floor(Math.random() * 6) + 1;
+
+            const diceIcon = document.getElementById('dice-icon');
+            diceIcon.className = "fa-solid fa-dice rolling";
+
+            setTimeout(() => {
+                diceIcon.className = `fa-solid fa-dice-${['one','two','three','four','five','six'][rollResult - 1]}`;
+                processPlayerMove(rollResult);
+            }, 600);
+        }
+
+        function addHistoryLog(message) {
+            const logEl = document.getElementById('history-log');
+            if (logEl.querySelector('.italic')) {
+                logEl.innerHTML = '';
+            }
+            logEl.innerHTML += `<div class="border-l-2 border-emerald-500 pl-2 py-0.5">${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function triggerVictory(player) {
+            gameState.isGameOver = true;
+            addHistoryLog(`🏆 <strong>${player.name} a remporté la partie !</strong>`);
+            showMessage("Victoire !", `${player.name} a atteint la case finale avec brio !`);
+        }
+
+        function triggerGameOver() {
+            gameState.isGameOver = true;
+            addHistoryLog(`⌛ Fin de partie : Nombre maximum de lancers atteint.`);
+            showMessage("Fin de Partie", "Nombre maximum de lancers atteint sans vainqueur !", "fa-solid fa-hourglass-end");
+        }
+    </script>
+</body>
+</html>
