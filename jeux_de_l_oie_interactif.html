@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de l'Oie Interactif Avancé</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            user-select: none;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
+            gap: 8px;
+        }
+        @keyframes bounce-short {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-bounce-short {
+            animation: bounce-short 0.5s ease-in-out infinite;
+        }
+        @keyframes roll {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .rolling {
+            animation: roll 0.4s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 flex flex-col justify-between">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                <i class="fa-solid fa-feather-pointed text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Jeu de l'Oie Suprême</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Version 100% personnalisable & Solo Bot</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Sélecteur de Luminosité -->
+            <div class="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center space-x-1 border border-slate-200 dark:border-slate-700">
+                <button onclick="setTheme('light')" id="btn-light" title="Mode Clair" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1">
+                    <i class="fa-solid fa-sun text-amber-500"></i>
+                    <span class="hidden sm:inline">Clair</span>
+                </button>
+                <button onclick="setTheme('dark')" id="btn-dark" title="Mode Sombre" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1">
+                    <i class="fa-solid fa-moon text-indigo-400"></i>
+                    <span class="hidden sm:inline">Sombre</span>
+                </button>
+                <button onclick="setTheme('night')" id="btn-night" title="Mode Nuit Profonde" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1">
+                    <i class="fa-solid fa-star text-blue-300"></i>
+                    <span class="hidden sm:inline">Nuit</span>
+                </button>
+            </div>
+            <button onclick="openSettings()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 w-10 h-10 rounded-xl flex items-center justify-center transition" title="Paramètres">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow container mx-auto px-4 py-6 max-w-7xl">
+
+        <!-- SETUP SCREEN / MODAL -->
+        <div id="settings-screen" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-xl rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 transform transition-all">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-brand-500/10 text-brand-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-sliders text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Paramètres de la Partie</h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Personnalisez vos règles avant de lancer les dés</p>
+                        </div>
+                    </div>
+                    <button onclick="closeSettingsIfGameStarted()" id="close-settings-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg hidden">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- Nombre de joueurs -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 flex justify-between">
+                            <span>Nombre de joueurs</span>
+                            <span id="val-players" class="text-brand-600 font-bold">2 Joueurs</span>
+                        </label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="setPlayerCount(1)" id="pcount-1" class="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm transition hover:border-brand-500">1 Joueur (vs Bot)</button>
+                            <button onclick="setPlayerCount(2)" id="pcount-2" class="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm transition hover:border-brand-500">2 Joueurs</button>
+                            <button onclick="setPlayerCount(3)" id="pcount-3" class="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm transition hover:border-brand-500">3 Joueurs</button>
+                            <button onclick="setPlayerCount(4)" id="pcount-4" class="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm transition hover:border-brand-500">4 Joueurs</button>
+                        </div>
+                        <p id="bot-info-msg" class="text-xs text-brand-600 dark:text-brand-400 mt-1.5 hidden"><i class="fa-solid fa-robot mr-1"></i> Mode Solo activé : Vous affronterez un joueur virtuel intelligent !</p>
+                    </div>
+
+                    <!-- Noms des joueurs personnalisés -->
+                    <div id="player-names-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Généré dynamiquement -->
+                    </div>
+
+                    <!-- Taille du plateau -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 flex justify-between">
+                            <span>Taille du plateau (Cases)</span>
+                            <span id="val-board-size" class="text-brand-600 font-bold">32 cases</span>
+                        </label>
+                        <input type="range" id="input-board-size" min="20" max="60" value="32" step="4" oninput="updateBoardSizeLabel(this.value)" class="w-full accent-brand-500 h-2 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer">
+                        <div class="flex justify-between text-xs text-slate-400 mt-1">
+                            <span>20 cases (Rapide)</span>
+                            <span>40 cases (Standard)</span>
+                            <span>60 cases (Épique)</span>
+                        </div>
+                    </div>
+
+                    <!-- Nombre de lancers de dés max / tours max -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 flex justify-between">
+                            <span>Limite de tours maximum</span>
+                            <span id="val-max-turns" class="text-brand-600 font-bold">50 tours</span>
+                        </label>
+                        <input type="range" id="input-max-turns" min="20" max="100" value="50" step="10" oninput="updateMaxTurnsLabel(this.value)" class="w-full accent-brand-500 h-2 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer">
+                        <div class="flex justify-between text-xs text-slate-400 mt-1">
+                            <span>20 tours</span>
+                            <span>50 tours</span>
+                            <span>100 tours</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="startGame()" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-2xl shadow-lg shadow-brand-500/30 transition flex items-center justify-center space-x-2 text-base">
+                    <span>Lancer la Partie</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME INTERFACE CONTAINER -->
+        <div id="game-container" class="grid grid-cols-1 lg:grid-cols-4 gap-6 hidden">
+
+            <!-- SIDEBAR: STATS & PLAYERS -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Tour actif / Infos -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs uppercase tracking-wider text-slate-400 font-bold">Tour actuel</span>
+                        <span id="turn-counter-badge" class="px-2.5 py-1 bg-brand-500/10 text-brand-600 text-xs font-bold rounded-full">Tour 1 / 50</span>
+                    </div>
+
+                    <!-- Joueur actif actuel card -->
+                    <div id="active-player-banner" class="p-4 rounded-2xl border-2 border-brand-500 bg-brand-50/50 dark:bg-brand-950/20 flex items-center space-x-4">
+                        <div id="active-player-avatar" class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md">
+                            P1
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">C'est au tour de :</div>
+                            <div id="active-player-name" class="font-bold text-base">Joueur 1</div>
+                        </div>
+                    </div>
+
+                    <!-- Bouton Dés & Action -->
+                    <div class="pt-2">
+                        <button onclick="rollDice()" id="roll-dice-btn" class="w-full py-4 bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-bold rounded-2xl shadow-xl shadow-brand-500/30 transition transform active:scale-95 flex items-center justify-center space-x-3 text-lg">
+                            <i id="dice-icon" class="fa-solid fa-dice text-2xl"></i>
+                            <span id="roll-btn-text">Lancer les Dés !</span>
+                        </button>
+                    </div>
+
+                    <!-- Résultat du dé récent -->
+                    <div id="dice-result-box" class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center border border-slate-100 dark:border-slate-800 hidden">
+                        <span class="text-xs text-slate-400">Vous avez obtenu :</span>
+                        <div id="dice-score-display" class="text-2xl font-black text-brand-600 mt-0.5">🎲 6</div>
+                    </div>
+                </div>
+
+                <!-- État des joueurs -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-400">Participants</h3>
+                    <div id="players-list-status" class="space-y-2.5">
+                        <!-- Injecté dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Historique des événements -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Journal de bord</span>
+                        <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+                    </h3>
+                    <div id="game-logs" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs text-slate-600 dark:text-slate-300">
+                        <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">La partie commence ! Bon jeu à tous.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOARD AREA -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Légende des cases -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                        <span class="font-medium">Oie (Avancer double)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-emerald-400 inline-block shadow-sm"></span>
+                        <span class="font-medium">Bonus (+3 cases)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-rose-400 inline-block shadow-sm"></span>
+                        <span class="font-medium">Malus (-3 cases)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-purple-400 inline-block shadow-sm"></span>
+                        <span class="font-medium">Rejouer</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-slate-400 inline-block shadow-sm"></span>
+                        <span class="font-medium">Piège (Passer tour)</span>
+                    </div>
+                </div>
+
+                <!-- Plateau de jeu visuel -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm relative min-h-[480px] flex flex-col justify-between">
+                    <div id="board-grid-container" class="board-grid">
+                        <!-- Les cases du plateau seront générées ici -->
+                    </div>
+
+                    <!-- Légende bas de plateau -->
+                    <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                        <span>Départ (Case 1)</span>
+                        <span class="font-bold text-brand-600">Arrivée (Dernière case)</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- END GAME MODAL / RECAP -->
+    <div id="endgame-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 text-center transform transition-all animate-bounce-short">
+            <div class="w-20 h-20 bg-amber-400/20 text-amber-500 rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-xl">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+                <h2 id="endgame-title" class="text-2xl font-bold">Victoire Magistrale !</h2>
+                <p id="endgame-subtitle" class="text-sm text-slate-500 dark:text-slate-400 mt-1">Le Joueur 1 a triomphé avec brio !</p>
+            </div>
+
+            <div id="endgame-stats" class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-left space-y-2 text-sm border border-slate-100 dark:border-slate-800">
+                <!-- Statistiques finales -->
+            </div>
+
+            <div class="flex space-x-3 pt-2">
+                <button onclick="openSettings()" class="flex-1 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 font-semibold rounded-2xl transition">
+                    Changer les règles
+                </button>
+                <button onclick="restartGame()" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-2xl shadow-lg shadow-brand-500/30 transition">
+                    Rejouer une partie
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="w-full text-center py-4 text-xs text-slate-400 border-t border-slate-100 dark:border-slate-900">
+        Jeu de l'Oie Interactif &bull; Conçu avec passion &bull; Mode Clair / Sombre / Nuit &bull; Solo & Multijoueur
+    </footer>
+
+    <!-- SCRIPT LOGIQUE DU JEU -->
+    <script>
+        // État global du jeu
+        let gameState = {
+            playerCount: 2,
+            isSoloWithBot: false,
+            boardSize: 32,
+            maxTurns: 50,
+            currentTurn: 1,
+            activePlayerIndex: 0,
+            players: [],
+            isGameOver: false,
+            specialCases: {}, // Map des cases spéciales type { 5: 'oie', 9: 'bonus', ... }
+            isRolling: false
+        };
+
+        // Configuration des avatars et couleurs des joueurs
+        const playerStyles = [
+            { name: 'Joueur 1', color: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-500', ring: 'ring-emerald-500' },
+            { name: 'Joueur 2', color: 'bg-indigo-500', text: 'text-indigo-500', border: 'border-indigo-500', ring: 'ring-indigo-500' },
+            { name: 'Joueur 3', color: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-500', ring: 'ring-amber-500' },
+            { name: 'Joueur 4', color: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', ring: 'ring-rose-500' },
+            { name: 'Bot Intelligent', color: 'bg-purple-600', text: 'text-purple-600', border: 'border-purple-600', ring: 'ring-purple-600' }
+        ];
+
+        // Gestion de la luminosité et des thèmes
+        function setTheme(theme) {
+            const root = document.documentElement;
+            root.classList.remove('dark');
+            document.body.classList.remove('bg-slate-950', 'bg-slate-900', 'bg-slate-50');
+
+            // Reset buttons style
+            ['light', 'dark', 'night'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700";
+            });
+
+            const activeBtn = document.getElementById(`btn-${theme}`);
+            activeBtn.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1 bg-white dark:bg-slate-700 shadow-sm font-bold text-brand-600 dark:text-white";
+
+            if (theme === 'dark') {
+                root.classList.add('dark');
+                document.body.classList.add('bg-slate-900');
+            } else if (theme === 'night') {
+                root.classList.add('dark');
+                document.body.classList.add('bg-slate-950');
+            } else {
+                document.body.classList.add('bg-slate-50');
+            }
+            localStorage.setItem('game_theme', theme);
+        }
+
+        // Charger le thème initial
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('game_theme') || 'light';
+            setTheme(savedTheme);
+            renderPlayerNameInputs();
+        });
+
+        // Paramétrage des joueurs
+        function setPlayerCount(count) {
+            gameState.playerCount = count;
+            gameState.isSoloWithBot = (count === 1);
+
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`pcount-${i}`);
+                if (i === count) {
+                    btn.className = "py-2.5 rounded-xl border-2 border-brand-500 bg-brand-50 dark:bg-brand-950/30 font-bold text-sm text-brand-600 transition";
+                } else {
+                    btn.className = "py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm transition hover:border-brand-500";
+                }
+            }
+
+            document.getElementById('val-players').innerText = count === 1 ? '1 Joueur + Bot' : `${count} Joueurs`;
+            const botMsg = document.getElementById('bot-info-msg');
+            if (count === 1) {
+                botMsg.classList.remove('hidden');
+            } else {
+                botMsg.classList.add('hidden');
+            }
+
+            renderPlayerNameInputs();
+        }
+
+        function renderPlayerNameInputs() {
+            const container = document.getElementById('player-names-container');
+            container.innerHTML = '';
+            const count = gameState.isSoloWithBot ? 1 : gameState.playerCount;
+
+            for (let i = 0; i < count; i++) {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-2";
+                div.innerHTML = `
+                    <span class="w-8 h-8 rounded-lg ${playerStyles[i].color} text-white flex items-center justify-center font-bold text-xs">P${i+1}</span>
+                    <input type="text" id="pname-${i}" value="${playerStyles[i].name}" placeholder="Nom du joueur ${i+1}" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500 font-medium">
+                `;
+                container.appendChild(div);
+            }
+
+            // Si mode solo, ajouter un champ pour le bot
+            if (gameState.isSoloWithBot) {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-2 opacity-80";
+                div.innerHTML = `
+                    <span class="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-robot"></i></span>
+                    <input type="text" disabled value="Bot Intelligent (IA)" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm cursor-not-allowed font-medium">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function updateBoardSizeLabel(val) {
+            gameState.boardSize = parseInt(val);
+            document.getElementById('val-board-size').innerText = `${val} cases`;
+        }
+
+        function updateMaxTurnsLabel(val) {
+            gameState.maxTurns = parseInt(val);
+            document.getElementById('val-max-turns').innerText = `${val} tours`;
+        }
+
+        function openSettings() {
+            document.getElementById('settings-screen').classList.remove('hidden');
+            if (gameState.players.length > 0) {
+                document.getElementById('close-settings-btn').classList.remove('hidden');
+            }
+        }
+
+        function closeSettingsIfGameStarted() {
+            if (gameState.players.length > 0) {
+                document.getElementById('settings-screen').classList.add('hidden');
+            }
+        }
+
+        // Génération aléatoire et intelligente des cases spéciales
+        function generateSpecialCases() {
+            gameState.specialCases = {};
+            const size = gameState.boardSize;
+            
+            // Placer quelques oies, bonus, malus, pièges
+            const types = ['oie', 'bonus', 'malus', 'rejouer', 'piege'];
+            for (let i = 3; i < size - 2; i += Math.floor(size / 6)) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                gameState.specialCases[i] = type;
+            }
+        }
+
+        // Lancement effectif de la partie
+        function startGame() {
+            const actualCount = gameState.isSoloWithBot ? 1 : gameState.playerCount;
+            gameState.players = [];
+
+            for (let i = 0; i < actualCount; i++) {
+                const nameInput = document.getElementById(`pname-${i}`);
+                const name = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : playerStyles[i].name;
+                gameState.players.push({
+                    id: i,
+                    name: name,
+                    position: 1,
+                    color: playerStyles[i].color,
+                    textColor: playerStyles[i].text,
+                    skipTurn: false,
+                    stats: { rolls: 0, bonuses: 0, maluses: 0 }
+                });
+            }
+
+            // Ajouter le bot si mode solo
+            if (gameState.isSoloWithBot) {
+                gameState.players.push({
+                    id: 1,
+                    name: 'Bot Intelligent',
+                    position: 1,
+                    color: playerStyles[4].color,
+                    textColor: playerStyles[4].text,
+                    skipTurn: false,
+                    isBot: true,
+                    stats: { rolls: 0, bonuses: 0, maluses: 0 }
+                });
+            }
+
+            gameState.currentTurn = 1;
+            gameState.activePlayerIndex = 0;
+            gameState.isGameOver = false;
+
+            generateSpecialCases();
+
+            // Fermer modal et afficher l'interface de jeu
+            document.getElementById('settings-screen').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('endgame-modal').classList.add('hidden');
+
+            renderBoard();
+            updateUI();
+            addLog("La partie commence avec " + gameState.players.length + " participants sur un plateau de " + gameState.boardSize + " cases !");
+        }
+
+        // Rendu visuel du plateau
+        function renderBoard() {
+            const container = document.getElementById('board-grid-container');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= gameState.boardSize; i++) {
+                const cell = document.createElement('div');
+                cell.className = "aspect-square rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex flex-col items-center justify-center relative p-1 transition-all";
+                
+                // Style des cases spéciales
+                let badgeHTML = `<span class="text-[10px] font-bold text-slate-400">#${i}</span>`;
+                let bgSpecialClass = "";
+
+                if (i === 1) {
+                    badgeHTML += `<span class="text-[9px] bg-slate-200 dark:bg-slate-700 px-1 rounded font-semibold text-slate-600 dark:text-slate-300">Départ</span>`;
+                } else if (i === gameState.boardSize) {
+                    bgSpecialClass = "border-2 border-brand-500 bg-brand-500/10";
+                    badgeHTML += `<span class="text-[9px] bg-brand-500 text-white px-1 rounded font-bold">Arrivée</span>`;
+                } else if (gameState.specialCases[i]) {
+                    const type = gameState.specialCases[i];
+                    if (type === 'oie') {
+                        bgSpecialClass = "bg-amber-500/10 border-amber-400/50";
+                        badgeHTML += `<i class="fa-solid fa-feather text-amber-500 text-xs mt-0.5"></i>`;
+                    } else if (type === 'bonus') {
+                        bgSpecialClass = "bg-emerald-500/10 border-emerald-400/50";
+                        badgeHTML += `<i class="fa-solid fa-gift text-emerald-500 text-xs mt-0.5"></i>`;
+                    } else if (type === 'malus') {
+                        bgSpecialClass = "bg-rose-500/10 border-rose-400/50";
+                        badgeHTML += `<i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs mt-0.5"></i>`;
+                    } else if (type === 'rejouer') {
+                        bgSpecialClass = "bg-purple-500/10 border-purple-400/50";
+                        badgeHTML += `<i class="fa-solid fa-rotate-right text-purple-500 text-xs mt-0.5"></i>`;
+                    } else if (type === 'piege') {
+                        bgSpecialClass = "bg-slate-400/10 border-slate-400/50";
+                        badgeHTML += `<i class="fa-solid fa-anchor text-slate-400 text-xs mt-0.5"></i>`;
+                    }
+                }
+
+                cell.className += " " + bgSpecialClass;
+                cell.innerHTML = badgeHTML;
+
+                // Conteneur des pions présents sur cette case
+                const pawnsContainer = document.createElement('div');
+                pawnsContainer.className = "flex flex-wrap items-center justify-center gap-0.5 mt-1";
+                pawnsContainer.id = `cell-pawns-${i}`;
+                cell.appendChild(pawnsContainer);
+
+                container.appendChild(cell);
+            }
+
+            updatePawnsOnBoard();
+        }
+
+        // Mettre à jour l'affichage des pions
+        function updatePawnsOnBoard() {
+            // Nettoyer tous les conteneurs de pions
+            for (let i = 1; i <= gameState.boardSize; i++) {
+                const pc = document.getElementById(`cell-pawns-${i}`);
+                if (pc) pc.innerHTML = '';
+            }
+
+            // Placer chaque joueur sur sa case
+            gameState.players.forEach((player, idx) => {
+                const pc = document.getElementById(`cell-pawns-${player.position}`);
+                if (pc) {
+                    const pawn = document.createElement('div');
+                    pawn.className = `w-5 h-5 rounded-full ${player.color} text-white flex items-center justify-center text-[10px] font-bold shadow-md transform hover:scale-110 transition`;
+                    pawn.innerText = `P${idx+1}`;
+                    pawn.title = player.name;
+                    pc.appendChild(pawn);
+                }
+            });
+        }
+
+        // Mise à jour de l'interface (tour, scores, badges)
+        function updateUI() {
+            const activePlayer = gameState.players[gameState.activePlayerIndex];
+
+            // Badge tour
+            document.getElementById('turn-counter-badge').innerText = `Tour ${gameState.currentTurn} / ${gameState.maxTurns}`;
+
+            // Bannière joueur actif
+            const banner = document.getElementById('active-player-banner');
+            banner.className = `p-4 rounded-2xl border-2 ${activePlayer.border} bg-brand-50/50 dark:bg-slate-800/80 flex items-center space-x-4 shadow-sm`;
+            
+            const avatar = document.getElementById('active-player-avatar');
+            avatar.className = `w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md ${activePlayer.color}`;
+            avatar.innerText = `P${gameState.activePlayerIndex + 1}`;
+
+            document.getElementById('active-player-name').innerText = activePlayer.name;
+
+            // Liste des statuts des joueurs
+            const listContainer = document.getElementById('players-list-status');
+            listContainer.innerHTML = '';
+
+            gameState.players.forEach((p, idx) => {
+                const isCurrent = (idx === gameState.activePlayerIndex);
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl border flex items-center justify-between transition ${isCurrent ? 'border-brand-500 bg-brand-50/30 dark:bg-brand-950/20 shadow-sm' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30'}`;
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg ${p.color} text-white flex items-center justify-center text-xs font-bold">${idx+1}</div>
+                        <div>
+                            <div class="font-bold text-sm flex items-center space-x-1.5">
+                                <span>${p.name}</span>
+                                ${p.isBot ? '<span class="text-[10px] bg-purple-500/10 text-purple-600 px-1.5 py-0.5 rounded font-semibold">IA</span>' : ''}
+                            </div>
+                            <div class="text-xs text-slate-400">Position : Case ${p.position}/${gameState.boardSize}</div>
+                        </div>
+                    </div>
+                    ${isCurrent ? '<span class="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping"></span>' : ''}
+                `;
+                listContainer.appendChild(item);
+            });
+
+            // Si c'est un bot, déclencher son tour automatiquement après un court délai
+            if (activePlayer.isBot && !gameState.isGameOver) {
+                document.getElementById('roll-dice-btn').disabled = true;
+                setTimeout(() => {
+                    executeBotTurn();
+                }, 1000);
+            } else {
+                document.getElementById('roll-dice-btn').disabled = false;
+            }
+        }
+
+        // Tour du Bot Intelligent
+        function executeBotTurn() {
+            if (gameState.isGameOver) return;
+            addLog("Le bot réfléchit et lance le dé...");
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+            
+            // Animation visuelle du dé
+            const diceIcon = document.getElementById('dice-icon');
+            diceIcon.classList.add('rolling');
+            
+            setTimeout(() => {
+                diceIcon.classList.remove('rolling');
+                processDiceResult(diceValue);
+            }, 600);
+        }
+
+        // Lancer les dés (Joueur humain)
+        function rollDice() {
+            if (gameState.isRolling || gameState.isGameOver) return;
+            gameState.isRolling = true;
+
+            const diceIcon = document.getElementById('dice-icon');
+            diceIcon.classList.add('rolling');
+
+            setTimeout(() => {
+                diceIcon.classList.remove('rolling');
+                const diceValue = Math.floor(Math.random() * 6) + 1;
+                processDiceResult(diceValue);
+                gameState.isRolling = false;
+            }, 600);
+        }
+
+        // Traitement du résultat du dé et de la logique de déplacement
+        function processDiceResult(diceValue) {
+            const player = gameState.players[gameState.activePlayerIndex];
+            player.stats.rolls++;
+
+            // Affichage du résultat
+            const resultBox = document.getElementById('dice-result-box');
+            resultBox.classList.remove('hidden');
+            document.getElementById('dice-score-display').innerText = `🎲 ${diceValue}`;
+
+            addLog(`${player.name} a obtenu ${diceValue} avec le dé.`);
+
+            // Vérifier si le joueur est bloqué (Piège)
+            if (player.skipTurn) {
+                player.skipTurn = false;
+                addLog(`${player.name} était bloqué par une ancre et passe son tour !`);
+                nextTurn();
+                return;
+            }
+
+            let oldPos = player.position;
+            let newPos = oldPos + diceValue;
+
+            // Gérer le rebond si dépassement de la case finale
+            if (newPos > gameState.boardSize) {
+                const overflow = newPos - gameState.boardSize;
+                newPos = gameState.boardSize - overflow;
+                addLog(`Rebonds ! ${player.name} dépasse la fin et recule à la case ${newPos}.`);
+            }
+
+            player.position = newPos;
+            updatePawnsOnBoard();
+
+            // Vérifier victoire immédiate
+            if (newPos === gameState.boardSize) {
+                triggerVictory(player);
+                return;
+            }
+
+            // Vérifier les effets des cases spéciales
+            let extraAction = false;
+            if (gameState.specialCases[newPos]) {
+                const type = gameState.specialCases[newPos];
+                if (type === 'oie') {
+                    player.position = Math.min(gameState.boardSize, newPos + diceValue);
+                    player.stats.bonuses++;
+                    addLog(`🪿 Case Oie ! ${player.name} double son avance et arrive sur la case ${player.position}.`);
+                } else if (type === 'bonus') {
+                    player.position = Math.min(gameState.boardSize, newPos + 3);
+                    player.stats.bonuses++;
+                    addLog(`🎁 Case Bonus ! ${player.name} gagne 3 cases et arrive sur la case ${player.position}.`);
+                } else if (type === 'malus') {
+                    player.position = Math.max(1, newPos - 3);
+                    player.stats.maluses++;
+                    addLog(`⚠️ Case Malus ! ${player.name} recule de 3 cases (case ${player.position}).`);
+                } else if (type === 'rejouer') {
+                    extraAction = true;
+                    addLog(`🔄 Case Rejouer ! ${player.name} bénéficie d'un tour supplémentaire !`);
+                } else if (type === 'piege') {
+                    player.skipTurn = true;
+                    addLog(`⚓ Case Piège ! ${player.name} est bloqué pour son prochain tour.`);
+                }
+                updatePawnsOnBoard();
+            }
+
+            // Vérifier victoire après effet bonus
+            if (player.position === gameState.boardSize) {
+                triggerVictory(player);
+                return;
+            }
+
+            // Passer au joueur suivant ou rejouer
+            if (extraAction) {
+                updateUI();
+            } else {
+                nextTurn();
+            }
+        }
+
+        function nextTurn() {
+            gameState.activePlayerIndex = (gameState.activePlayerIndex + 1) % gameState.players.length;
+            
+            // Si on a fait le tour de tous les joueurs, incrémenter le tour global
+            if (gameState.activePlayerIndex === 0) {
+                gameState.currentTurn++;
+                if (gameState.currentTurn > gameState.maxTurns) {
+                    triggerMaxTurnsEnd();
+                    return;
+                }
+            }
+
+            updateUI();
+        }
+
+        // Déclenchement de la victoire
+        function triggerVictory(winner) {
+            gameState.isGameOver = true;
+            document.getElementById('endgame-title').innerText = `Victoire de ${winner.name} ! 🎉`;
+            document.getElementById('endgame-subtitle').innerText = `Triomphe accompli en ${gameState.currentTurn} tours.`;
+
+            let statsHtml = `
+                <div class="flex justify-between font-medium"><span>Lancers de dés totaux :</span> <span class="font-bold">${winner.stats.rolls}</span></div>
+                <div class="flex justify-between font-medium"><span>Cases Bonus récoltées :</span> <span class="font-bold text-emerald-500">${winner.stats.bonuses}</span></div>
+                <div class="flex justify-between font-medium"><span>Cases Malus subies :</span> <span class="font-bold text-rose-500">${winner.stats.maluses}</span></div>
+            `;
+            document.getElementById('endgame-stats').innerHTML = statsHtml;
+            document.getElementById('endgame-modal').classList.remove('hidden');
+            addLog(`🏆 ${winner.name} a gagné la partie !`);
+        }
+
+        // Fin par limite de tours
+        function triggerMaxTurnsEnd() {
+            gameState.isGameOver = true;
+            // Trouver le joueur le plus avancé
+            let bestPlayer = gameState.players[0];
+            gameState.players.forEach(p => {
+                if (p.position > bestPlayer.position) bestPlayer = p;
+            });
+
+            document.getElementById('endgame-title').innerText = `Fin de Partie (Limite atteinte) ! ⏰`;
+            document.getElementById('endgame-subtitle',).innerText = `${bestPlayer.name} est le plus avancé et remporte la partie !`;
+            
+            let statsHtml = `
+                <div class="text-center font-semibold text-brand-600 mb-2">Le joueur ${bestPlayer.name} était à la case ${bestPlayer.position}/${gameState.boardSize}</div>
+            `;
+            document.getElementById('endgame-stats').innerHTML = statsHtml;
+            document.getElementById('endgame-modal').classList.remove('hidden');
+            addLog(`⏰ Limite de ${gameState.maxTurns} tours atteinte. Victoire aux points de ${bestPlayer.name} !`);
+        }
+
+        function restartGame() {
+            document.getElementById('endgame-modal').classList.add('hidden');
+            openSettings();
+        }
+
+        function addLog(msg) {
+            const logsContainer = document.getElementById('game-logs');
+            const entry = document.createElement('div');
+            entry.className = "p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800";
+            entry.innerHTML = `<span class="text-[10px] text-slate-400 font-mono">[Tour ${gameState.currentTurn}]</span> ${msg}`;
+            logsContainer.prepend(entry);
+        }
+    </script>
+</body>
+</html>
